@@ -250,7 +250,3 @@ UIBegin:
 	}
 	goto UIBegin;
 }
-
-void helloWorld() {
-	std::cout << 2333 << std::endl;
-}
