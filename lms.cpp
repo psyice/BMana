@@ -1,24 +1,25 @@
 #include "lms.h"
 
-rapidjson::Document lms::database;
-rapidjson::Value lms::emptyValue;
-std::map<std::string, int> lms::idToSub;
-std::map<std::string, int> lms::titleToSub;
-std::map<std::string, int> lms::isbnToSub;
+lms::jsonDoc lms::emptyDOM;
+lms::jsonValue lms::emptyValue;
+lms::Allocator& lms::allocator = emptyDOM.GetAllocator();
+lms::siMap lms::idToSub;
+lms::siMap lms::titleToSub;
+lms::siMap lms::isbnToSub;
 
 void
-lms::
-init(std::string dbPath, lms::BookDatabase& bookDB) {
+lms::Database::
+init() {
 	FILE* fp = fopen(dbPath.c_str(), "r");
 	char readBuffer[65536];
 	rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-	lms::database.ParseStream(is);
+	dbDOM.ParseStream(is);
 	fclose(fp);
-	bookDB.books = database["books"];
-	for (rapidjson::SizeType i = 0; i < bookDB.books.Size(); ++i) {
-			lms::idToSub[bookDB.books[i]["id"].GetString()] = i;
-			lms::titleToSub[bookDB.books[i]["title"].GetString()] = i;
-			lms::isbnToSub[bookDB.books[i]["isbn"].GetString()] = i;
+	books = dbDOM["books"];
+	for (SizeType i = 0; i < books.Size(); ++i) {
+			idToSub[books[i]["id"].GetString()] = i;
+			titleToSub[books[i]["title"].GetString()] = i;
+			isbnToSub[books[i]["isbn"].GetString()] = i;
 	}
 }
 
@@ -26,7 +27,6 @@ void
 lms::BookDatabase::
 addNewBook() {
 	std::cin.ignore();
-	rapidjson::Document::AllocatorType& allocator = lms::database.GetAllocator();
 	rapidjson::Value book(rapidjson::kObjectType);
 	std::string input;
 	rapidjson::Value str(rapidjson::kStringType);
@@ -99,7 +99,7 @@ printBook(int sub) {
 
 void
 lms::BookDatabase::
-searchByID(std::string id) {
+searchBookByID(std::string id) {
 	if (lms::idToSub[id] == 0) {
 		std::cerr << "该图书不存在" << std::endl;
 	} else {
@@ -109,7 +109,7 @@ searchByID(std::string id) {
 
 void
 lms::BookDatabase::
-searchByTitle(std::string title) {
+searchBookByTitle(std::string title) {
 	if (lms::titleToSub[title] == 0) {
 		std::cerr << "该图书不存在" << std::endl;
 	} else {
@@ -119,7 +119,7 @@ searchByTitle(std::string title) {
 
 void
 lms::BookDatabase::
-searchByISBN(std::string isbn) {
+searchBookByISBN(std::string isbn) {
 	if (lms::isbnToSub[isbn] == 0) {
 		std::cerr << "该图书不存在" << std::endl;
 	} else {
@@ -139,7 +139,7 @@ printAllBooks() {
 		<< std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << "inv"
 		<< std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << "totalInv" << std::endl;
 	std::cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << std::endl;
-	for (rapidjson::SizeType i = 0; i < books.Size(); ++i) {
+	for (SizeType i = 0; i < books.Size(); ++i) {
 		if (books[i] != NULL) {
 			std::cout << std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << books[i]["id"].GetString()
 				<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << books[i]["title"].GetString()
@@ -162,31 +162,11 @@ printID() {
 }
 
 void
-lms::
-saveBooks(std::string dbPath, BookDatabase bookDB) {
-	//for (rapidjson::Value::ValueIterator itr = bookDB.books.Begin(); itr != bookDB.books.End(); ) {
-	//if (*itr == NULL) {
-	//itr =	bookDB.books.Erase(itr);
-	//} else {
-	//++itr;
-	//}
-	//}
-	FILE* fp = fopen(dbPath.c_str(), "w");
-	char writeBuffer[65536];
-	rapidjson::FileWriteStream os(fp, writeBuffer, sizeof(writeBuffer));
-	rapidjson::Writer<rapidjson::FileWriteStream> writer(os);
-	lms::database["books"] = bookDB.books;
-	lms::database.Accept(writer);
-	fclose(fp);
-	bookDB.books = lms::database["books"];
-}
-
-void
-lms::
-saveChanges(std::string dbPath, BookDatabase bookDB) {
-	for (rapidjson::Value::ValueIterator itr = bookDB.books.Begin(); itr != bookDB.books.End(); ) {
+lms::Database::
+saveBooks() {
+	for (rapidjson::Value::ValueIterator itr = books.Begin(); itr != books.End(); ) {
 		if (*itr == NULL) {
-			itr =	bookDB.books.Erase(itr);
+			itr =	books.Erase(itr);
 		} else {
 			++itr;
 		}
@@ -195,22 +175,22 @@ saveChanges(std::string dbPath, BookDatabase bookDB) {
 	char writeBuffer[65536];
 	rapidjson::FileWriteStream os(fp, writeBuffer, sizeof(writeBuffer));
 	rapidjson::Writer<rapidjson::FileWriteStream> writer(os);
-	lms::database["books"] = bookDB.books;
-	lms::database.Accept(writer);
+	dbDOM["books"] = books;
+	dbDOM.Accept(writer);
 	fclose(fp);
-	bookDB.books = lms::database["books"];
+	books = dbDOM["books"];
 	exit(0);
 }
 
 void
-lms::BookDatabase::
-userInterface(std::string dbPath, BookDatabase& bookDB) {
+lms::Database::
+booksInterface() {
 UIBegin:
 	std::cout << "图书维护 1：新增 2：更改 3：删除 4：查找 5：显示 6：全删 0：退出=>"; 
 	int selection;
 	std::cin >> selection;
 	switch(selection) {
-		case(1) : addNewBook(); saveBooks(dbPath, bookDB); break;
+		case(1) : addNewBook(); break;
 		case(2) : break;
 		case(3) : {
 								std::cout << "删除 1: 按id删除 2: 按书名删除 3: 按isbn删除=>";
@@ -225,7 +205,6 @@ UIBegin:
 														 break;
 													 }
 								}
-								saveBooks(dbPath, bookDB);
 								break;
 							}
 		case(4) : {
@@ -237,7 +216,7 @@ UIBegin:
 														 std::cout << "请输入ID:" << std::endl;
 														 std::string id;
 														 std::cin >> id;
-														 searchByID(id);
+														 searchBookByID(id);
 														 break;
 													 }
 								}
@@ -245,7 +224,7 @@ UIBegin:
 							}
 		case(5) : printAllBooks(); break;
 		case(6) : break;
-		case(0) : lms::saveChanges(dbPath, bookDB);
+		case(0) : saveBooks(); return;
 		default : goto UIBegin;
 	}
 	goto UIBegin;

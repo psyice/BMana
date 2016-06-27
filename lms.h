@@ -13,43 +13,34 @@
 #include "include/rapidjson/writer.h"
 
 namespace lms {
+	using jsonDoc = rapidjson::Document;
+	using jsonValue = rapidjson::Value;
+	using string = std::string;
+	using siMap = std::map<string, int>;
+	using SizeType = rapidjson::SizeType;
+	using Allocator = rapidjson::Document::AllocatorType;
 
-	extern rapidjson::Document database;
-	extern rapidjson::Value emptyValue;
-	extern std::map<std::string, int> idToSub;
-	extern std::map<std::string, int> titleToSub;
-	extern std::map<std::string, int> isbnToSub;
-
-	class Book {
-		public:
-		private:
-			std::string id;
-			std::string title;
-			std::string author;
-			std::string isbn;
-			std::string language;
-			std::string press;
-			int inventory;
-			int totalInventory;
-	};
+	extern	jsonDoc emptyDOM;
+	extern jsonValue emptyValue;
+	extern Allocator& allocator;
+	extern siMap idToSub;
+	extern siMap titleToSub;
+	extern siMap isbnToSub;
 
 	class BookDatabase {
 		public:
 			BookDatabase() : books(emptyValue) {}
-			friend void init(std::string, BookDatabase&);
-			friend void saveBooks(std::string, BookDatabase);
-			friend void saveChanges(std::string, BookDatabase);
+			void saveChanges();
 			void addNewBook();
 			void deleteByID(std::string);
 			void printAllBooks();
 			void searchBook(int id);
-			void searchByID(std::string);
-			void searchByTitle(std::string);
-			void searchByISBN(std::string);
-			void userInterface(std::string dbPath, BookDatabase& bookDB);
+			void searchBookByID(std::string);
+			void searchBookByTitle(std::string);
+			void searchBookByISBN(std::string);
 		private:
-			void printBook(int);
-			rapidjson::Value& books;
+			void printBook(int); protected:
+				jsonValue& books;
 	};
 
 	class Debug {
@@ -57,9 +48,22 @@ namespace lms {
 			static void printID();
 	};
 
-	void init(std::string dbPath, BookDatabase& bookDB);
-	void saveBooks(std::string, BookDatabase);
-	void saveChanges(std::string, BookDatabase);
+
+	class UserDatabase {
+		public:
+		private:
+	};
+
+	class Database : public BookDatabase, public UserDatabase{
+		public:
+			Database(string dP) : dbPath(dP) {}
+			void init();
+			void saveBooks();
+			void booksInterface();
+		private:
+			string dbPath;
+			jsonDoc dbDOM;
+	};
 
 }
 
