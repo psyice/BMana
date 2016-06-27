@@ -4,7 +4,7 @@ using namespace std;
 using namespace lms;
 int
 main() {
-	Database test("test.json");
+	Database test("book.json");
 	test.init();
 	test.booksInterface();
 }
