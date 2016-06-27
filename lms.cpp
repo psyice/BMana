@@ -8,22 +8,6 @@ lms::siMap lms::titleToSub;
 lms::siMap lms::isbnToSub;
 
 void
-lms::Database::
-init() {
-	FILE* fp = fopen(dbPath.c_str(), "r");
-	char readBuffer[65536];
-	rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-	dbDOM.ParseStream(is);
-	fclose(fp);
-	books = dbDOM["books"];
-	for (SizeType i = 0; i < books.Size(); ++i) {
-			idToSub[books[i]["id"].GetString()] = i;
-			titleToSub[books[i]["title"].GetString()] = i;
-			isbnToSub[books[i]["isbn"].GetString()] = i;
-	}
-}
-
-void
 lms::BookDatabase::
 addNewBook() {
 	std::cin.ignore();
@@ -62,12 +46,41 @@ addNewBook() {
 void
 lms::BookDatabase::
 deleteByID(std::string id) {
-	// FIXME 首次删除会导致Array下标变化, 进而导致第二次删除会失败
 	if (lms::idToSub.count(id) != 0) {
 		int sub = lms::idToSub[id];
 		lms::idToSub.erase(idToSub.find(id));
 		lms::titleToSub.erase(titleToSub.find((std::string)books[sub]["title"].GetString()));
 		lms::isbnToSub.erase(isbnToSub.find((std::string)books[sub]["isbn"].GetString()));
+		books[sub] = NULL;
+		std::cout << "删除成功" << std::endl;
+	} else {
+		std::cerr << "书籍不存在, 删除失败" << std::endl;
+	}
+}
+
+void
+lms::BookDatabase::
+deleteByTitle(std::string title) {
+	if (lms::titleToSub.count(title) != 0) {
+		int sub = lms::titleToSub[title];
+		lms::idToSub.erase(idToSub.find((std::string)books[sub]["id"].GetString()));
+		lms::titleToSub.erase(titleToSub.find(title));
+		lms::isbnToSub.erase(isbnToSub.find((std::string)books[sub]["isbn"].GetString()));
+		books[sub] = NULL;
+		std::cout << "删除成功" << std::endl;
+	} else {
+		std::cerr << "书籍不存在, 删除失败" << std::endl;
+	}
+}
+
+void
+lms::BookDatabase::
+deleteByISBN(std::string isbn) {
+	if (lms::isbnToSub.count(isbn) != 0) {
+		int sub = lms::isbnToSub[isbn];
+		lms::idToSub.erase(idToSub.find((std::string)books[sub]["id"].GetString()));
+		lms::titleToSub.erase(titleToSub.find((std::string)books[sub]["title"].GetString()));
+		lms::isbnToSub.erase(isbnToSub.find(isbn));
 		books[sub] = NULL;
 		std::cout << "删除成功" << std::endl;
 	} else {
@@ -154,10 +167,32 @@ printAllBooks() {
 }
 
 void
-lms::Debug::
-printID() {
-	for (auto i : idToSub) {
-		std::cout << i.first << " " << i.second << std::endl;
+lms::BookDatabase::
+deleteAllBooks() {
+	std::cout << "危险: 确认删除所有图书信息?(y/n)";
+	char yn;
+	std::cin >> yn;
+	if (yn == 'y') {
+		for (rapidjson::Value::ValueIterator it = books.Begin(); it != books.End(); ) {
+			it = books.Erase(it);
+		}
+		std::cout << "删除成功!\n";
+	}
+}
+
+void
+lms::Database::
+init() {
+	FILE* fp = fopen(dbPath.c_str(), "r");
+	char readBuffer[65536];
+	rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+	dbDOM.ParseStream(is);
+	fclose(fp);
+	books = dbDOM["books"];
+	for (SizeType i = 0; i < books.Size(); ++i) {
+		idToSub[books[i]["id"].GetString()] = i;
+		titleToSub[books[i]["title"].GetString()] = i;
+		isbnToSub[books[i]["isbn"].GetString()] = i;
 	}
 }
 
@@ -193,7 +228,7 @@ UIBegin:
 		case(1) : addNewBook(); break;
 		case(2) : break;
 		case(3) : {
-								std::cout << "删除 1: 按id删除 2: 按书名删除 3: 按isbn删除=>";
+								std::cout << "删除 1: 按id删除 2: 按书名删除 3: 按ISBN删除=>";
 								int selection2;
 								std::cin >> selection2;
 								switch(selection2) {
@@ -202,6 +237,21 @@ UIBegin:
 														 std::string id;
 														 std::cin >> id;
 														 deleteByID(id);
+														 break;
+													 }
+									case(2) :{
+														 std::cout << "请输入书名:" << std::endl;
+														 std::string title;
+														 std::cin.ignore();
+														 std::getline(std::cin, title);
+														 deleteByTitle(title);
+														 break;
+													 }
+									case(3) :{
+														 std::cout << "请输入ISBN:" << std::endl;
+														 std::string isbn;
+														 std::cin >> isbn;
+														 deleteByISBN(isbn);
 														 break;
 													 }
 								}
@@ -219,13 +269,44 @@ UIBegin:
 														 searchBookByID(id);
 														 break;
 													 }
+									case(2) :{
+														 std::cout << "请输入书名:" << std::endl;
+														 std::string title;
+														 std::cin.ignore();
+														 std::getline(std::cin, title);
+														 searchBookByTitle(title);
+														 break;
+													 }
+									case(3) :{
+														 std::cout << "请输入ISBN:" << std::endl;
+														 std::string isbn;
+														 std::cin >> isbn;
+														 searchBookByISBN(isbn);
+														 break;
+													 }
 								}
 								break;
 							}
 		case(5) : printAllBooks(); break;
-		case(6) : break;
+		case(6) : deleteAllBooks(); break;
 		case(0) : saveBooks(); return;
 		default : goto UIBegin;
 	}
 	goto UIBegin;
+}
+
+void
+lms::Debug::
+printID() {
+	for (auto i : idToSub) {
+		std::cout << i.first << " " << i.second << std::endl;
+	}
+}
+
+void
+lms::Debug::
+printISBN() {
+	for (auto i : isbnToSub) {
+		std::cout << i.first << ' ' << i.second << std::endl;
+	}
 }

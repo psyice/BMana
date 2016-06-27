@@ -33,19 +33,17 @@ namespace lms {
 			void saveChanges();
 			void addNewBook();
 			void deleteByID(std::string);
-			void printAllBooks();
+			void deleteByTitle(std::string);
+			void deleteByISBN(std::string);
 			void searchBook(int id);
 			void searchBookByID(std::string);
 			void searchBookByTitle(std::string);
 			void searchBookByISBN(std::string);
+			void printAllBooks();
+			void deleteAllBooks();
 		private:
 			void printBook(int); protected:
 				jsonValue& books;
-	};
-
-	class Debug {
-		public:
-			static void printID();
 	};
 
 
@@ -63,6 +61,12 @@ namespace lms {
 		private:
 			string dbPath;
 			jsonDoc dbDOM;
+	};
+
+	class Debug {
+		public:
+			static void printID();
+			static void printISBN();
 	};
 
 }
