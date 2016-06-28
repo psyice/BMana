@@ -1,14 +1,7 @@
 #include "lms.h"
 
-lms::jsonDoc lms::emptyDOM;
-lms::jsonValue lms::emptyValue;
-lms::Allocator& lms::allocator = emptyDOM.GetAllocator();
-lms::siMap lms::idToSub;
-lms::siMap lms::titleToSub;
-lms::siMap lms::isbnToSub;
-
 void
-lms::BookDatabase::
+lms::Database::
 addNewBook() {
 	std::cin.ignore();
 	rapidjson::Value book(rapidjson::kObjectType);
@@ -16,10 +9,12 @@ addNewBook() {
 	rapidjson::Value str(rapidjson::kStringType);
 	std::cout << "请输入ID:";
 	getline(std::cin, input);
+	idToSub[input] = books.Size();
 	str.SetString(input.c_str(), allocator);
 	book.AddMember("id", str, allocator);
 	std::cout << "请输入书名:";
 	getline(std::cin, input);
+	titleToSub[input] = books.Size();
 	str.SetString(input.c_str(), allocator);
 	book.AddMember("title", str, allocator);
 	std::cout << "请输入作者:";
@@ -28,6 +23,7 @@ addNewBook() {
 	book.AddMember("author", str, allocator);
 	std::cout << "请输入ISBN号:";
 	getline(std::cin, input);
+	isbnToSub[input] = books.Size();
 	str.SetString(input.c_str(), allocator);
 	book.AddMember("isbn", str, allocator);
 	std::cout << "请输入语言:";
@@ -44,13 +40,13 @@ addNewBook() {
 }
 
 void
-lms::BookDatabase::
+lms::Database::
 deleteByID(std::string id) {
-	if (lms::idToSub.count(id) != 0) {
-		int sub = lms::idToSub[id];
-		lms::idToSub.erase(idToSub.find(id));
-		lms::titleToSub.erase(titleToSub.find((std::string)books[sub]["title"].GetString()));
-		lms::isbnToSub.erase(isbnToSub.find((std::string)books[sub]["isbn"].GetString()));
+	if (idToSub.count(id) != 0) {
+		int sub = idToSub[id];
+		idToSub.erase(idToSub.find(id));
+		titleToSub.erase(titleToSub.find((std::string)books[sub]["title"].GetString()));
+		isbnToSub.erase(isbnToSub.find((std::string)books[sub]["isbn"].GetString()));
 		books[sub] = NULL;
 		std::cout << "删除成功" << std::endl;
 	} else {
@@ -59,13 +55,13 @@ deleteByID(std::string id) {
 }
 
 void
-lms::BookDatabase::
+lms::Database::
 deleteByTitle(std::string title) {
-	if (lms::titleToSub.count(title) != 0) {
-		int sub = lms::titleToSub[title];
-		lms::idToSub.erase(idToSub.find((std::string)books[sub]["id"].GetString()));
-		lms::titleToSub.erase(titleToSub.find(title));
-		lms::isbnToSub.erase(isbnToSub.find((std::string)books[sub]["isbn"].GetString()));
+	if (titleToSub.count(title) != 0) {
+		int sub = titleToSub[title];
+		idToSub.erase(idToSub.find((std::string)books[sub]["id"].GetString()));
+		titleToSub.erase(titleToSub.find(title));
+		isbnToSub.erase(isbnToSub.find((std::string)books[sub]["isbn"].GetString()));
 		books[sub] = NULL;
 		std::cout << "删除成功" << std::endl;
 	} else {
@@ -74,13 +70,13 @@ deleteByTitle(std::string title) {
 }
 
 void
-lms::BookDatabase::
+lms::Database::
 deleteByISBN(std::string isbn) {
-	if (lms::isbnToSub.count(isbn) != 0) {
-		int sub = lms::isbnToSub[isbn];
-		lms::idToSub.erase(idToSub.find((std::string)books[sub]["id"].GetString()));
-		lms::titleToSub.erase(titleToSub.find((std::string)books[sub]["title"].GetString()));
-		lms::isbnToSub.erase(isbnToSub.find(isbn));
+	if (isbnToSub.count(isbn) != 0) {
+		int sub = isbnToSub[isbn];
+		idToSub.erase(idToSub.find((std::string)books[sub]["id"].GetString()));
+		titleToSub.erase(titleToSub.find((std::string)books[sub]["title"].GetString()));
+		isbnToSub.erase(isbnToSub.find(isbn));
 		books[sub] = NULL;
 		std::cout << "删除成功" << std::endl;
 	} else {
@@ -89,8 +85,38 @@ deleteByISBN(std::string isbn) {
 }
 
 void
+lms::Database::
+searchBookByID(std::string id) const {
+	if (idToSub.count(id) == 0) {
+		std::cerr << "该图书不存在" << std::endl;
+	} else {
+		printBook(idToSub.at(id));
+	}
+}
+
+void
+lms::Database::
+searchBookByTitle(std::string title) const {
+	if (titleToSub.count(title) == 0) {
+		std::cerr << "该图书不存在" << std::endl;
+	} else {
+		printBook(titleToSub.at(title));
+	}
+}
+
+void
+lms::Database::
+searchBookByISBN(std::string isbn) const {
+	if (isbnToSub.count(isbn) == 0) {
+		std::cerr << "该图书不存在" << std::endl;
+	} else {
+		printBook(isbnToSub.at(isbn));
+	}
+}
+
+void
 lms::BookDatabase::
-printBook(int sub) {
+printBook(int sub) const {
 	std::cout << "┏━━━━━━━━┳━━━━━━━┓ " << std::endl;
 	std::cout << "┃　　　编号　　  ┃ " << books[sub]["id"].GetString() << std::endl;
 	std::cout << "┣━━━━━━━━╋━━━━━━━┫ " << std::endl;
@@ -110,39 +136,9 @@ printBook(int sub) {
 	std::cout << "┗━━━━━━━━┻━━━━━━━┛ " << std::endl;
 }
 
-void
-lms::BookDatabase::
-searchBookByID(std::string id) {
-	if (lms::idToSub[id] == 0) {
-		std::cerr << "该图书不存在" << std::endl;
-	} else {
-		printBook(lms::idToSub[id]);
-	}
-}
-
-void
-lms::BookDatabase::
-searchBookByTitle(std::string title) {
-	if (lms::titleToSub[title] == 0) {
-		std::cerr << "该图书不存在" << std::endl;
-	} else {
-		printBook(lms::titleToSub[title]);
-	}
-}
-
-void
-lms::BookDatabase::
-searchBookByISBN(std::string isbn) {
-	if (lms::isbnToSub[isbn] == 0) {
-		std::cerr << "该图书不存在" << std::endl;
-	} else {
-		printBook(lms::isbnToSub[isbn]);
-	}
-}
-
 void 
 lms::BookDatabase::
-printAllBooks() {
+printAllBooks() const {
 	std::cout << std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << "id"
 		<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << "title"
 		<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << "author"
@@ -295,18 +291,3 @@ UIBegin:
 	goto UIBegin;
 }
 
-void
-lms::Debug::
-printID() {
-	for (auto i : idToSub) {
-		std::cout << i.first << " " << i.second << std::endl;
-	}
-}
-
-void
-lms::Debug::
-printISBN() {
-	for (auto i : isbnToSub) {
-		std::cout << i.first << ' ' << i.second << std::endl;
-	}
-}

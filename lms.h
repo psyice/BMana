@@ -20,30 +20,24 @@ namespace lms {
 	using SizeType = rapidjson::SizeType;
 	using Allocator = rapidjson::Document::AllocatorType;
 
-	extern	jsonDoc emptyDOM;
-	extern jsonValue emptyValue;
-	extern Allocator& allocator;
-	extern siMap idToSub;
-	extern siMap titleToSub;
-	extern siMap isbnToSub;
 
 	class BookDatabase {
 		public:
-			BookDatabase() : books(emptyValue) {}
+			BookDatabase(jsonValue& jV) : books(jV) {}
 			void saveChanges();
-			void addNewBook();
-			void deleteByID(std::string);
-			void deleteByTitle(std::string);
-			void deleteByISBN(std::string);
-			void searchBook(int id);
-			void searchBookByID(std::string);
-			void searchBookByTitle(std::string);
-			void searchBookByISBN(std::string);
-			void printAllBooks();
+			virtual void addNewBook() = 0;
+			virtual void deleteByID(std::string) = 0;
+			virtual void deleteByTitle(std::string) = 0;
+			virtual void deleteByISBN(std::string) = 0;
+			//virtual void searchBook(int id) const = 0;
+			virtual void searchBookByID(std::string) const = 0;
+			virtual void searchBookByTitle(std::string) const = 0;
+			virtual void searchBookByISBN(std::string) const = 0;
+			void printAllBooks() const;
 			void deleteAllBooks();
-		private:
-			void printBook(int); protected:
-				jsonValue& books;
+		protected:
+			void printBook(int) const;
+			jsonValue& books;
 	};
 
 
@@ -54,13 +48,27 @@ namespace lms {
 
 	class Database : public BookDatabase, public UserDatabase{
 		public:
-			Database(string dP) : dbPath(dP) {}
+			Database(string dP) : BookDatabase(emptyValue), dbPath(dP)  {}
 			void init();
 			void saveBooks();
 			void booksInterface();
+			void addNewBook() override;
+			void deleteByID(std::string) override;
+			void deleteByTitle(std::string) override;
+			void deleteByISBN(std::string) override;
+			//void searchBook(int id) const override;
+			void searchBookByID(std::string) const override;
+			void searchBookByTitle(std::string) const override;
+			void searchBookByISBN(std::string) const override;
 		private:
 			string dbPath;
 			jsonDoc dbDOM;
+			jsonDoc emptyDOM;
+			jsonValue emptyValue;
+			Allocator allocator;
+			siMap idToSub;
+			siMap titleToSub;
+			siMap isbnToSub;
 	};
 
 	class Debug {
