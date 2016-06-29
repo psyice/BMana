@@ -4,7 +4,10 @@ using namespace std;
 using namespace lms;
 int
 main() {
-	Database test("books.json");
+	Database test;
 	test.init();
-	test.booksInterface();
+	//test.booksInterface();
+	test.usersInterface();
+	//test.addNewUser();
+	//test.saveUsers();
 }
