@@ -75,6 +75,35 @@ saveChanges() {
 	exit(0);
 }
 
+void
+lms::Database::
+borrowBook() {
+
+}
+
+void
+lms::Database::
+returnBook() {
+
+}
+
+void
+lms::Database::
+mainInterface() {
+Begin:
+	std::cout << "图书管理系统 1：借书 2：还书 3：图书维护 4：用户维护 0：退出=>"; 
+	int selection;
+	std::cin >> selection;
+	switch(selection) {
+		case(1) : borrowBook(); break;
+		case(2) : returnBook(); break;
+		case(3) : booksInterface(); break;
+		case(4) : usersInterface(); break;
+		case(0) : saveChanges(); return;
+	}
+	goto Begin;
+}
+
 /**********************************************************************
 *                             Books Part                             *
 **********************************************************************/
@@ -82,7 +111,7 @@ saveChanges() {
 void
 lms::Database::
 booksInterface() {
-UIBegin:
+Begin:
 	std::cout << "图书维护 1：新增 2：更改 3：删除 4：查找 5：显示 6：全删 0：退出=>"; 
 	int selection;
 	std::cin >> selection;
@@ -148,9 +177,8 @@ UIBegin:
 													 } } break; } case(5) : printAllBooks(); break;
 		case(6) : deleteAllBooks(); break;
 		case(0) : return;
-		default : goto UIBegin;
 	}
-	goto UIBegin;
+	goto Begin;
 }
 
 void
@@ -336,7 +364,7 @@ deleteAllBooks() {
 void
 lms::Database::
 usersInterface() {
-UIBegin:
+Begin:
 	std::cout << "用户维护 1：新增 2：更改 3：删除 4：查找 5：显示 6：全删 0：退出=>"; 
 	int selection;
 	std::cin >> selection;
@@ -392,9 +420,8 @@ UIBegin:
 		case(5) : printAllUsers(); break;
 		case(6) : deleteAllUsers(); break;
 		case(0) : return;
-		default : goto UIBegin;
 	}
-	goto UIBegin;
+	goto Begin;
 }
 
 void

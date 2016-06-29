@@ -7,6 +7,9 @@
 #include <string>
 #include <map>
 #include <fstream>
+#include <termios.h>
+#include <unistd.h>
+#include <stdio.h>
 #include "include/rapidjson/filereadstream.h"
 #include "include/rapidjson/filewritestream.h"
 #include "include/rapidjson/document.h"
@@ -19,7 +22,6 @@ namespace lms {
 	using siMap = std::map<string, int>;
 	using SizeType = rapidjson::SizeType;
 	using Allocator = rapidjson::Document::AllocatorType;
-
 
 	class BookDatabase {
 		public:
@@ -59,6 +61,9 @@ namespace lms {
 			Database() : BookDatabase(emptyBooks), UserDatabase(emptyUsers) {}
 			void init();
 			void saveChanges();
+			void borrowBook();
+			void returnBook();
+			void mainInterface();
 			//Books
 			void booksInterface();
 			void addNewBook() override;

@@ -7,7 +7,7 @@ main() {
 	Database test;
 	test.init();
 	//test.booksInterface();
-	test.usersInterface();
+	test.mainInterface();
 	//test.addNewUser();
 	//test.saveUsers();
 }
