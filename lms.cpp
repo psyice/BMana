@@ -22,7 +22,7 @@ init() {
 	FILE* fp = fopen("db.json", "r");
 	if (fp == nullptr) {
 		fp = fopen("db.json", "w");
-		char fuck[] = "{\"books\":[{\"id\":\"01\",\"title\":\"HelloWorld!\",\"author\":\"Psyice\",\"isbn\":\"123456789\",\"language\":\"English\",\"press\":\"ShanghaiJixiang\",\"inventory\":10,\"totalInventory\":20},{\"id\":\"02\",\"title\":\"WorldHello!\",\"author\":\"Sice\",\"isbn\":\"987654321\",\"language\":\"Chinese\",\"press\":\"ShanghaiJixiang\",\"inventory\":1,\"totalInventory\":2}],\"readers\":[{\"id\":\"01\",\"name\":\"Sice\"}]}" ;
+		char fuck[] = "{\"books\":[{\"id\":\"01\",\"title\":\"HelloWorld!\",\"author\":\"Psyice\",\"isbn\":\"123456789\",\"language\":\"English\",\"press\":\"ShanghaiJixiang\",\"inventory\":1,\"totalInventory\":2, \"borrowerID\" : [\"01\"]},{\"id\":\"02\",\"title\":\"WorldHello!\",\"author\":\"Sice\",\"isbn\":\"987654321\",\"language\":\"Chinese\",\"press\":\"ShanghaiJixiang\",\"inventory\":2,\"totalInventory\":2, \"borrowerID\" : []}],\"readers\":[{\"id\":\"01\",\"name\":\"Sice\", \"borrowedID\" : [\"01\"]}]}" ;
 		fwrite(fuck, sizeof(char), sizeof(fuck), fp);
 		std::cout << "初始化数据库成功\n";
 		fclose(fp);
@@ -67,24 +67,66 @@ saveChanges() {
 	rapidjson::FileWriteStream os(fp, writeBuffer, sizeof(writeBuffer));
 	rapidjson::Writer<rapidjson::FileWriteStream> writer(os);
 	dbDOM["books"] = books;
-	dbDOM["users"] = users;
+	dbDOM["readers"] = users;
 	dbDOM.Accept(writer);
-	fclose(fp);
 	books = dbDOM["books"];
-	users = dbDOM["users"];
-	exit(0);
+	users = dbDOM["readers"];
+	fclose(fp);
 }
 
 void
 lms::Database::
 borrowBook() {
-
+	std::cout << "输入借书人ID=>";
+	string userID;
+	std::cin >> userID;
+	std::cout << "输入图书ID=>";
+	string bookID;
+	std::cin >> bookID;
+	std::cout << "将 " << books[bookIDToSub[bookID]]["title"].GetString() << " 借给 " << users[userIDToSub[userID]]["name"].GetString() << " ?(y/n)";
+	char confirm;
+	std::cin >> confirm;
+	if (confirm == 'y') {
+		if (books[bookIDToSub[bookID]]["inventory"].GetInt() == 0) {
+			std::cout << "书籍库存为0, 无法借出\n";
+			return;
+		} else {
+			books[bookIDToSub[bookID]]["inventory"].SetInt(books[bookIDToSub[bookID]]["inventory"].GetInt() - 1);
+			rapidjson::Value str(rapidjson::kStringType);
+			str.SetString(userID.c_str(), allocator);
+			books[bookIDToSub[bookID]]["borrowerID"].PushBack(str, allocator);
+			str.SetString(bookID.c_str(), allocator);
+			users[bookIDToSub[bookID]]["borrowedID"].PushBack(str, allocator);
+			std::cout << "借出成功!\n";
+		}
+	} else {
+		return;
+	}
 }
 
 void
 lms::Database::
 returnBook() {
-
+	std::cout << "输入还书人ID=>";
+	string userID;
+	std::cin >> userID;
+	std::cout << "输入图书ID=>";
+	string bookID;
+	std::cin >> bookID;
+	for (rapidjson::Value::ValueIterator itr = users[userIDToSub[userID]]["borrowedID"].Begin(); itr != users[userIDToSub[userID]]["borrowedID"].End(); ++itr) {
+		if (itr -> GetString() == bookID) {
+			users[userIDToSub[userID]]["borrowedID"].Erase(itr);
+			break;
+		}
+	}
+	for (rapidjson::Value::ValueIterator itr = books[userIDToSub[bookID]]["borrowerID"].Begin(); itr != books[userIDToSub[bookID]]["borrowerID"].End(); ++itr) {
+		if (itr -> GetString() == userID) {
+			books[bookIDToSub[bookID]]["borrowerID"].Erase(itr);
+			break;
+		}
+	}
+	books[bookIDToSub[bookID]]["inventory"].SetInt(books[bookIDToSub[bookID]]["inventory"].GetInt() + 1);
+	std::cout << "还书成功!\n";
 }
 
 void
@@ -105,8 +147,8 @@ Begin:
 }
 
 /**********************************************************************
-*                             Books Part                             *
-**********************************************************************/
+ *                             Books Part                             *
+ **********************************************************************/
 
 void
 lms::Database::
@@ -314,7 +356,12 @@ printBook(int sub) const {
 	std::cout << "┃　　 现库存 　　┃ " << books[sub]["inventory"].GetInt() << std::endl;
 	std::cout << "┣━━━━━━━━╋━━━━━━━┫ " << std::endl;
 	std::cout << "┃　　 总库存 　　┃ " << books[sub]["totalInventory"].GetInt() << std::endl;
-	std::cout << "┗━━━━━━━━┻━━━━━━━┛ " << std::endl;
+	std::cout << "┣━━━━━━━━╋━━━━━━━┫ " << std::endl;
+	std::cout << "┃　　借书人ID　　┃ ";
+	for (rapidjson::Value::ValueIterator itr = books[sub]["borrowerID"].Begin(); itr != books[sub]["borrowerID"].End(); ++itr) {
+		std::cout << itr -> GetString() <<", ";
+	}
+	std::cout << "\n┗━━━━━━━━┻━━━━━━━┛ " << std::endl;
 }
 
 void 
@@ -322,23 +369,29 @@ lms::BookDatabase::
 printAllBooks() const {
 	std::cout << std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << "id"
 		<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << "title"
-		<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << "author"
-		<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << "isbn"
+		<< std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << "author"
+		<< std::setfill(' ') << std::setw(15) << std::setiosflags(std::ios::right) << "isbn"
 		<< std::setfill(' ') << std::setw(15) << std::setiosflags(std::ios::right) << "language"
-		<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << "press"
-		<< std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << "inv"
-		<< std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << "totalInv" << std::endl;
+		<< std::setfill(' ') << std::setw(15) << std::setiosflags(std::ios::right) << "press"
+		<< std::setfill(' ') << std::setw(5) << std::setiosflags(std::ios::right) << "inv"
+		<< std::setfill(' ') << std::setw(5) << std::setiosflags(std::ios::right) << "tIv"
+		<< "    borrowerID" << std::endl;
 	std::cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << std::endl;
 	for (SizeType i = 0; i < books.Size(); ++i) {
 		if (books[i] != NULL) {
 			std::cout << std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << books[i]["id"].GetString()
 				<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << books[i]["title"].GetString()
-				<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << books[i]["author"].GetString()
-				<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << books[i]["isbn"].GetString()
+				<< std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << books[i]["author"].GetString()
+				<< std::setfill(' ') << std::setw(15) << std::setiosflags(std::ios::right) << books[i]["isbn"].GetString()
 				<< std::setfill(' ') << std::setw(15) << std::setiosflags(std::ios::right) << books[i]["language"].GetString()
-				<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << books[i]["press"].GetString()
-				<< std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << books[i]["inventory"].GetInt()
-				<< std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << books[i]["totalInventory"].GetInt() << std::endl;
+				<< std::setfill(' ') << std::setw(15) << std::setiosflags(std::ios::right) << books[i]["press"].GetString()
+				<< std::setfill(' ') << std::setw(5) << std::setiosflags(std::ios::right) << books[i]["inventory"].GetInt()
+				<< std::setfill(' ') << std::setw(5) << std::setiosflags(std::ios::right) << books[i]["totalInventory"].GetInt()
+				<< "    ";
+			for (rapidjson::Value::ValueIterator itr = books[i]["borrowerID"].Begin(); itr != books[i]["borrowerID"].End(); ++itr) {
+				std::cout << itr -> GetString() <<", ";
+			}
+			std::cout << std::endl;
 		}
 	}
 }
@@ -358,8 +411,8 @@ deleteAllBooks() {
 }
 
 /**********************************************************************
-*                             User Parts                             *
-**********************************************************************/
+ *                             User Parts                             *
+ **********************************************************************/
 
 void
 lms::Database::
@@ -490,7 +543,7 @@ searchUserByName(std::string name) const {
 	} else {
 		printUser(userNameToSub.at(name));
 	}
-	
+
 }
 
 void
@@ -500,19 +553,30 @@ printUser(int sub) const {
 	std::cout << "┃　　　编号　　  ┃ " << users[sub]["id"].GetString() << std::endl;
 	std::cout << "┣━━━━━━━━╋━━━━━━━┫ " << std::endl;
 	std::cout << "┃　　　姓名　　　┃ " << users[sub]["name"].GetString() << std::endl;
-	std::cout << "┗━━━━━━━━┻━━━━━━━┛ " << std::endl;
+	std::cout << "┣━━━━━━━━╋━━━━━━━┫ " << std::endl;
+	std::cout << "┃　　所借书ID　　┃ ";
+	for (rapidjson::Value::ValueIterator itr = users[sub]["borrowedID"].Begin(); itr != users[sub]["borrowedID"].End(); ++itr) {
+		std::cout << itr -> GetString() <<", ";
+	}
+	std::cout << "\n┗━━━━━━━━┻━━━━━━━┛ " << std::endl;
 }
 
 void
 lms::UserDatabase::
 printAllUsers() const {
 	std::cout << std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << "id"
-		<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << "name" << std::endl;
+		<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << "name"
+		<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << "borrowedBooks" << std::endl;
 	std::cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << std::endl;
 	for (SizeType i = 0; i < users.Size(); ++i) {
 		if (users[i] != NULL) {
 			std::cout << std::setfill(' ') << std::setw(10) << std::setiosflags(std::ios::right) << users[i]["id"].GetString()
-				<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << users[i]["name"].GetString() << std::endl;
+				<< std::setfill(' ') << std::setw(20) << std::setiosflags(std::ios::right) << users[i]["name"].GetString();
+			std::cout << "       ";
+			for (rapidjson::Value::ValueIterator itr = users[i]["borrowedID"].Begin(); itr != users[i]["borrowedID"].End(); ++itr) {
+				std::cout << itr -> GetString() <<", ";
+			}
+			std::cout << std::endl;
 		}
 	}
 }
